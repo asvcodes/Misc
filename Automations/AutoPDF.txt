@@ -1,0 +1,68 @@
+#1
+
+Sub BulkPDFs()
+    Dim masterDoc As Document
+    Dim singleDoc As Document
+    Dim lastRecordNum As Long
+    Dim pdfFolder As String
+    
+    ' Turn off screen updating
+    Application.ScreenUpdating = False
+    
+    Set masterDoc = ActiveDocument
+    pdfFolder = "E:\Documents\BulkPDFS\" 'Folder to store merged PDFs
+    
+    ' Create folder if it doesn't exist
+    If Dir(pdfFolder, vbDirectory) = "" Then MkDir pdfFolder
+    
+    masterDoc.MailMerge.DataSource.ActiveRecord = wdLastRecord
+    lastRecordNum = masterDoc.MailMerge.DataSource.ActiveRecord
+    masterDoc.MailMerge.DataSource.ActiveRecord = wdFirstRecord
+    
+    Do While lastRecordNum > 0
+        masterDoc.MailMerge.Destination = wdSendToNewDocument
+        masterDoc.MailMerge.DataSource.FirstRecord = masterDoc.MailMerge.DataSource.ActiveRecord
+        masterDoc.MailMerge.DataSource.LastRecord = masterDoc.MailMerge.DataSource.ActiveRecord
+        masterDoc.MailMerge.Execute False
+        Set singleDoc = ActiveDocument
+        singleDoc.ExportAsFixedFormat OutputFileName:=pdfFolder & masterDoc.MailMerge.DataSource.DataFields("Filename").Value & ".pdf", ExportFormat:=17
+        singleDoc.Close False
+        
+        If masterDoc.MailMerge.DataSource.ActiveRecord >= lastRecordNum Then
+            lastRecordNum = 0
+        Else
+            masterDoc.MailMerge.DataSource.ActiveRecord = wdNextRecord
+        End If
+    Loop
+
+#2
+
+Sub ManyPDFs()
+    Dim masterDoc As Document
+    Dim singleDoc As Document
+    Dim recordNum As Long
+    Dim pdfFolder As String
+    
+    Set masterDoc = ActiveDocument
+    pdfFolder = "E:\Documents\BulkPDFS\" 'Folder to store merged PDFs
+    
+    ' Create folder if it doesn't exist
+    If Dir(pdfFolder, vbDirectory) = "" Then MkDir pdfFolder
+    
+    masterDoc.MailMerge.DataSource.ActiveRecord = wdLastRecord
+    recordNum = masterDoc.MailMerge.DataSource.ActiveRecord
+    masterDoc.MailMerge.DataSource.ActiveRecord = wdFirstRecord
+    
+    For i = 1 To recordNum
+        masterDoc.MailMerge.Destination = wdSendToNewDocument
+        masterDoc.MailMerge.DataSource.FirstRecord = masterDoc.MailMerge.DataSource.ActiveRecord
+        masterDoc.MailMerge.DataSource.LastRecord = masterDoc.MailMerge.DataSource.ActiveRecord
+        masterDoc.MailMerge.Execute False
+        Set singleDoc = ActiveDocument
+        singleDoc.ExportAsFixedFormat OutputFileName:=pdfFolder & masterDoc.MailMerge.DataSource.DataFields("Filename").Value & ".pdf", ExportFormat:=17
+        singleDoc.Close False
+        masterDoc.MailMerge.DataSource.ActiveRecord = wdNextRecord
+    Next i
+    
+    MsgBox "PDFs generated successfully!", vbInformation
+End Sub

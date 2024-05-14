@@ -1,0 +1,81 @@
+function onFormSubmit(e) {
+  try {
+    // Get the active form and responses
+    const form = FormApp.getActiveForm();
+    const formResponses = form.getResponses();
+    const latestResponse = formResponses[formResponses.length - 1];
+    const itemResponses = latestResponse.getItemResponses();
+
+    // Define the ID of the Google Doc template
+    const templateId = '1A70S49TpJcG6o5AhsJuz1tND9KCznOrmMlptX1REgI0'; // Replace with your template ID
+
+    // Make a copy of the template
+    const templateCopy = DriveApp.getFileById(templateId).makeCopy();
+    const templateCopyId = templateCopy.getId();
+
+    // Open the copy and replace the merge tags
+    const doc = DocumentApp.openById(templateCopyId);
+    const body = doc.getBody();
+    const currentDate = new Date();
+    const options = { day: '2-digit', month: 'short', year: 'numeric' };
+    const formattedDate = currentDate.toLocaleDateString('en-IN', options);
+
+    let naam = '';
+    itemResponses.forEach(itemResponse => {
+      const title = itemResponse.getItem().getTitle();
+      const response = itemResponse.getResponse();
+      if (title === 'Name') {
+        naam = processName(response);
+      }
+      body.replaceText('{' + title + '}',naam[0]);
+    });
+
+    // Replace date tag
+    body.replaceText('{Date}', formattedDate);
+
+    doc.saveAndClose();
+
+    // Convert the updated copy to PDF
+    const pdf = DriveApp.getFileById(templateCopyId).getAs('application/pdf').setName(`${naam[1]}'s Certificate`);
+
+    // Get email draft
+    const drafts = GmailApp.getDrafts();
+    const draftSubject = 'Thank you for Participating!'; // Subject of the draft email
+    const draft = drafts.filter(draft => draft.getMessage().getSubject() === draftSubject)[0];
+    const emailBody = draft.getMessage().getBody();
+    // Get the respondent's email
+    const respondentEmail = latestResponse.getRespondentEmail();
+    
+    // Prepare email body
+    const emailContent = emailBody.replace('{name}', naam[1]);
+
+    // Send the email with the PDF
+    //MailApp.sendEmail(respondentEmail,`Hey ${naam[1]}, Thank you for Participating!`,emailContent,{htmlBody: emailContent,bcc:"adarshshamshervimal@gmail.com",attachments: [pdf],name:'Adarsh S. Vimal'});
+    MailApp.sendEmail(respondentEmail,`Hey ${naam[1]}, Thank you for Participating!`,emailContent,{htmlBody: emailContent,bcc:"adarshshamshervimal@gmail.com",name:'Adarsh S. Vimal'});
+
+
+    // Delete the copy
+    DriveApp.getFileById(templateCopyId).setTrashed(true);
+  } catch (error) {
+    Logger.log(error.toString());
+    // Handle errors gracefully
+    // You can send an email to yourself or perform other actions to notify about the error
+  }
+}
+
+function processName(name) {
+  // Trim unnecessary spaces
+  name = name.trim();
+
+  // Convert to title case
+  var splitStr = name.toLowerCase().split(' ');
+  for (var i = 0; i < splitStr.length; i++) {
+    splitStr[i] = splitStr[i].charAt(0).toUpperCase() + splitStr[i].substring(1);     
+  }
+  var titleCaseName = splitStr.join(' '); 
+
+  // Get the first name
+  var firstName = splitStr[0];
+
+  return [titleCaseName, firstName];
+}
